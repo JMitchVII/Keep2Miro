@@ -2,20 +2,57 @@
  * INDEX.JS
  * 
  * purpose, provide file server definitions
+ * 
+ * TODO: 
+ * 1) Make app push keep notes to the Miro board!
+ * 1.1) As per: https://developers.miro.com/docs/working-with-sticky-notes-and-tags-with-the-rest-api
+ * 1.2) Make the app associate keep notes with a sticky note ID in MIRO
+ * 1.3) Make the app store this association somewhere
+ * 2) Add a refresh endpoint 
  */
+
 
 // Require the framework and instantiate it
 const fastify = require('fastify')({ logger: true })
 const extractGreenNotesAndChildren = require('./Parser/ParseForGreen')
 const axios = require('axios').default;
+
 // cache of the keep application state, this thing is 20MB so we don't want to fetch it every time.
 var cache = undefined
 
-// Declare root route
+// cache of the OAuth authorization code.  This app is currently only designed to handle one session, mine.
+var authCode = undefined
+
+// Miro's OAuth API
+const miroOauth = 'https://api.miro.com/v1/oauth/token'
+
+// Address off the KeepRest server
+const keepRestUrl = 'http://127.0.0.1:5000/All'
+
+// Access token for modifying miro board
+var accessToken = undefined
+
+const stickyNoteTemplate = `{
+    "data": {
+        "content": "CHANGE THIS",
+        "shape": "square"
+    },
+    "style": {
+        "fillColor": "green"
+    },
+    "position": {
+        "origin": "center",
+        "x": 0,
+        "y": 0
+    }
+}`
+
+
+// Declare root route - serves up the green notes
 fastify.get('/', async (request, reply) => {
     if(cache === undefined) {
         try {
-            const response = await axios.get('http://127.0.0.1:5000/All');
+            const response = await axios.get(keepRestUrl);
             console.log(response);
             cache = response.data
             return extractGreenNotesAndChildren(response.data)
@@ -27,6 +64,81 @@ fastify.get('/', async (request, reply) => {
         return extractGreenNotesAndChildren(cache)
     }
 })
+
+
+/** ROUTE NAME: Push
+ *  PURPOSE: to upload all green keep notes as Miro sticky notes.
+ *  
+ */
+fastify.get('/push', async (request, reply) => {
+    // Get green notes from cache
+    var greenNotes;
+    if(cache === undefined) {
+        try {
+            const response = await axios.get(keepRestUrl);
+            console.log(response);
+            cache = response.data
+        } catch (error) {
+            console.error(error);
+            return error
+        }
+    }
+    greenNotes = extractGreenNotesAndChildren(cache)
+    
+    // Determine how many notes we're dealing with
+    let numNotes = greenNotes.length
+    // Parse Green notes into appropriate Sticky note structures
+    var notesToCreate = [];
+    var index = 0;
+    greenNotes.forEach(gn => {
+        notesToCreate[index] = JSON.parse(stickyNoteTemplate);
+        if(gn.childNodes == undefined){ // if node has no children, can use it's own text.
+            notesToCreate[index].data.content = `${gn.title.toUpperCase()}\n${gn.text}`;
+        } else { // otherwise we have to harvest it.
+            var contentString = "";
+            gn.childNodes.forEach(cn => contentString += `- ${cn.text}\n`);
+            notesToCreate[index].data.content = `${gn.title} \n ${contentString}`;
+        }
+        notesToCreate[index].position.x = index % 10;
+        notesToCreate[index].position.y = Math.floor(index / 10);
+        index++;
+    })
+    return notesToCreate;
+    // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
+    
+    // Store corresponding note Ids
+    
+    // write keep note -> ID associations to file.
+    
+    // inform of progress
+    
+})
+
+
+// oauth handling route
+// UPDATE: As it turns out the prototype token doesn't expire so I don't need this right now
+//
+// fastify.get('/oauth', async (request, reply) => {
+//     authCode = request.query['code']
+//
+//     axios.post(miroOauth, {
+//         grant_type:'authorization_code',
+//         client_id:'3458764526226875255',
+//         client_secret:process.env['MIRO_CLIENT_SECRET'],
+//         code:authCode,
+//         redirect_uri:request.query['redirect_uri'],
+//         Accept:'application/json'
+//     })
+//         .then(function (response) {
+//             console.log(response);
+//             accessToken = response.data
+//         })
+//         .catch(function (error) {
+//             console.log(error);
+//         });
+//    
+// })
+
 
 // Run the server!
 const start = async () => {

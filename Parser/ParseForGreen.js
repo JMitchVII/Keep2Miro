@@ -4,7 +4,7 @@
  */
 
 module.exports = function extractGreenNotesAndChildren(allNotes) {
-    let greenNotes = allNotes['nodes'].filter(n => n.color === "GREEN")
+    let greenNotes = allNotes['nodes'].filter(n => n.color === "GREEN" && n.isArchived == false)
     //------------- COLLECT THE CHILDREN!
     //---- FETCH THEIR IDs
     let greenNoteIds = greenNotes.map(gn => gn['id'])

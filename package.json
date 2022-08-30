@@ -9,6 +9,7 @@
   "author": "jmitchell",
   "license": "MIT",
   "dependencies": {
+    "api": "^4.5.2",
     "axios": "^0.27.2",
     "fastify": "^4.5.2"
   }

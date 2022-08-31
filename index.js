@@ -11,11 +11,15 @@
  * 2) Add a refresh endpoint 
  */
 
+const sdk = require('api')('@miro-ea/v2.0#33ql1cuxl6zk4s7y');
+
 
 // Require the framework and instantiate it
+const fs = require('fs');
 const fastify = require('fastify')({ logger: true })
 const extractGreenNotesAndChildren = require('./Parser/ParseForGreen')
 const axios = require('axios').default;
+const boardId = ""
 
 // cache of the keep application state, this thing is 20MB so we don't want to fetch it every time.
 var cache = undefined
@@ -99,17 +103,30 @@ fastify.get('/push', async (request, reply) => {
             gn.childNodes.forEach(cn => contentString += `- ${cn.text}\n`);
             notesToCreate[index].data.content = `${gn.title} \n ${contentString}`;
         }
-        notesToCreate[index].position.x = index % 10;
-        notesToCreate[index].position.y = Math.floor(index / 10);
+        const spacingMultiplier = 200;
+        notesToCreate[index].position.x = (index % 10)* spacingMultiplier;
+        notesToCreate[index].position.y = (Math.floor(index / 10)) * spacingMultiplier;
+
+        notesToCreate[index]['keepid'] = gn.id;
+        
         index++;
     })
-    return notesToCreate;
+   
     // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
+    var responses = [];
     
+    sdk.auth('eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_IismcDr_6azwvpLR82FaJKwM0SQ');
+    notesToCreate.forEach(ntc => {
+        sdk.createStickyNoteItem({
+            data: {...ntc.data},
+            position: {...ntc.position},
+            style: {...ntc.style},
+        }, {board_id: 'uXjVOwEgz_A='})
+            .then(res => responses.push[{response:res,id:ntc.id}])
+            .catch(err => console.error(err));
+    })
     // Store corresponding note Ids
-    
-    // write keep note -> ID associations to file.
-    
+    fs.writeFile('responses.json',JSON.stringify(responses),err => console.log(err))
     // inform of progress
     
 })

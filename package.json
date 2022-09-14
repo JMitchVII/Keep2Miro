@@ -9,8 +9,10 @@
   "author": "jmitchell",
   "license": "MIT",
   "dependencies": {
+    "@google-cloud/local-auth": "^2.1.0",
     "api": "^4.5.2",
     "axios": "^0.27.2",
-    "fastify": "^4.5.2"
+    "fastify": "^4.5.2",
+    "googleapis": "^105.0.0"
   }
 }

@@ -1,25 +1,32 @@
 ﻿/**
  * INDEX.JS
- * 
- * purpose, provide file server definitions
- * 
- * TODO: 
+ *
+ * PURPOSE: Webserver endpoint defininition.
+ *
+ * TODO:
  * 1) Make app push keep notes to the Miro board!
  * 1.1) As per: https://developers.miro.com/docs/working-with-sticky-notes-and-tags-with-the-rest-api
  * 1.2) Make the app associate keep notes with a sticky note ID in MIRO
  * 1.3) Make the app store this association somewhere
- * 2) Add a refresh endpoint 
+ * 2) Add a refresh endpoint
+ *
+ * REVISIONS:
+ * 9/12/2022 - Adding Infrastructure for Google Calendar events
+ *
  */
 
 const sdk = require('api')('@miro-ea/v2.0#33ql1cuxl6zk4s7y');
 
 
 // Require the framework and instantiate it
+// ----- JSON AND FRAMEWORK REQUIREMENTS
 const fs = require('fs');
-const fastify = require('fastify')({ logger: true })
+const fastify = require('fastify')({logger: true})
 const extractGreenNotesAndChildren = require('./Parser/ParseForGreen')
 const axios = require('axios').default;
-const boardId = ""
+
+//TODO: this should not be a const.
+const boardId = 'uXjVOwEgz_A='
 
 // cache of the keep application state, this thing is 20MB so we don't want to fetch it every time.
 var cache = undefined
@@ -54,7 +61,7 @@ const stickyNoteTemplate = `{
 
 // Declare root route - serves up the green notes
 fastify.get('/', async (request, reply) => {
-    if(cache === undefined) {
+    if (cache === undefined) {
         try {
             const response = await axios.get(keepRestUrl);
             console.log(response);
@@ -72,12 +79,12 @@ fastify.get('/', async (request, reply) => {
 
 /** ROUTE NAME: Push
  *  PURPOSE: to upload all green keep notes as Miro sticky notes.
- *  
+ *
  */
 fastify.get('/push', async (request, reply) => {
     // Get green notes from cache
     var greenNotes;
-    if(cache === undefined) {
+    if (cache === undefined) {
         try {
             const response = await axios.get(keepRestUrl);
             console.log(response);
@@ -88,7 +95,7 @@ fastify.get('/push', async (request, reply) => {
         }
     }
     greenNotes = extractGreenNotesAndChildren(cache)
-    
+
     // Determine how many notes we're dealing with
     let numNotes = greenNotes.length
     // Parse Green notes into appropriate Sticky note structures
@@ -96,7 +103,7 @@ fastify.get('/push', async (request, reply) => {
     var index = 0;
     greenNotes.forEach(gn => {
         notesToCreate[index] = JSON.parse(stickyNoteTemplate);
-        if(gn.childNodes == undefined){ // if node has no children, can use it's own text.
+        if (gn.childNodes == undefined) { // if node has no children, can use it's own text.
             notesToCreate[index].data.content = `${gn.title.toUpperCase()}\n${gn.text}`;
         } else { // otherwise we have to harvest it.
             var contentString = "";
@@ -104,31 +111,30 @@ fastify.get('/push', async (request, reply) => {
             notesToCreate[index].data.content = `${gn.title} \n ${contentString}`;
         }
         const spacingMultiplier = 200;
-        notesToCreate[index].position.x = (index % 10)* spacingMultiplier;
+        notesToCreate[index].position.x = (index % 10) * spacingMultiplier;
         notesToCreate[index].position.y = (Math.floor(index / 10)) * spacingMultiplier;
 
         notesToCreate[index]['keepid'] = gn.id;
-        
+
         index++;
     })
-   
+
     // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
     var responses = [];
-    
     sdk.auth('eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_IismcDr_6azwvpLR82FaJKwM0SQ');
     notesToCreate.forEach(ntc => {
         sdk.createStickyNoteItem({
             data: {...ntc.data},
             position: {...ntc.position},
             style: {...ntc.style},
-        }, {board_id: 'uXjVOwEgz_A='})
-            .then(res => responses.push[{response:res,id:ntc.id}])
+        }, {board_id: boardId})
+            .then(res => responses.push[{response: res, id: ntc.id}])
             .catch(err => console.error(err));
     })
     // Store corresponding note Ids
-    fs.writeFile('responses.json',JSON.stringify(responses),err => console.log(err))
+    fs.writeFile('responses.json', JSON.stringify(responses), err => console.log(err))
     // inform of progress
-    
+    console.info('pushes complete!');
 })
 
 
@@ -160,7 +166,7 @@ fastify.get('/push', async (request, reply) => {
 // Run the server!
 const start = async () => {
     try {
-        await fastify.listen({ port: 3000 })
+        await fastify.listen({port: 3000})
     } catch (err) {
         fastify.log.error(err)
         process.exit(1)

@@ -1,1 +1,2 @@
 ﻿- Calendar service currently has a const for it's credential path.
+- Miro Auth token is an inline string

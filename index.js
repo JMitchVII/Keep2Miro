@@ -15,8 +15,6 @@
  *
  */
 
-const sdk = require('api')('@miro-ea/v2.0#33ql1cuxl6zk4s7y');
-
 
 // Require the framework and instantiate it
 // ----- JSON AND FRAMEWORK REQUIREMENTS
@@ -28,14 +26,10 @@ const axios = require('axios').default;
 //TODO: this should not be a const.
 const boardId = 'uXjVOwEgz_A='
 
+const miroService = require('./Service/MiroService')
+
 // cache of the keep application state, this thing is 20MB so we don't want to fetch it every time.
 var cache = undefined
-
-// cache of the OAuth authorization code.  This app is currently only designed to handle one session, mine.
-var authCode = undefined
-
-// Miro's OAuth API
-const miroOauth = 'https://api.miro.com/v1/oauth/token'
 
 // Address off the KeepRest server
 const keepRestUrl = 'http://127.0.0.1:5000/All'
@@ -59,7 +53,10 @@ const stickyNoteTemplate = `{
 }`
 
 
-// Declare root route - serves up the green notes
+/**
+ * Route: ROOT
+ * Purpose: Health check endpoint, returns a JSON array of all green keep notes.
+ */
 fastify.get('/', async (request, reply) => {
     if (cache === undefined) {
         try {
@@ -77,9 +74,10 @@ fastify.get('/', async (request, reply) => {
 })
 
 
+
+
 /** ROUTE NAME: Push
  *  PURPOSE: to upload all green keep notes as Miro sticky notes.
- *
  */
 fastify.get('/push', async (request, reply) => {
     // Get green notes from cache
@@ -113,55 +111,17 @@ fastify.get('/push', async (request, reply) => {
         const spacingMultiplier = 200;
         notesToCreate[index].position.x = (index % 10) * spacingMultiplier;
         notesToCreate[index].position.y = (Math.floor(index / 10)) * spacingMultiplier;
-
         notesToCreate[index]['keepid'] = gn.id;
-
         index++;
     })
 
     // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
-    var responses = [];
-    sdk.auth('eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_IismcDr_6azwvpLR82FaJKwM0SQ');
-    notesToCreate.forEach(ntc => {
-        sdk.createStickyNoteItem({
-            data: {...ntc.data},
-            position: {...ntc.position},
-            style: {...ntc.style},
-        }, {board_id: boardId})
-            .then(res => responses.push[{response: res, id: ntc.id}])
-            .catch(err => console.error(err));
-    })
+    var responses = createStickyNotesFromList(notesToCreate);
     // Store corresponding note Ids
     fs.writeFile('responses.json', JSON.stringify(responses), err => console.log(err))
     // inform of progress
     console.info('pushes complete!');
 })
-
-
-// oauth handling route
-// UPDATE: As it turns out the prototype token doesn't expire so I don't need this right now
-//
-// fastify.get('/oauth', async (request, reply) => {
-//     authCode = request.query['code']
-//
-//     axios.post(miroOauth, {
-//         grant_type:'authorization_code',
-//         client_id:'3458764526226875255',
-//         client_secret:process.env['MIRO_CLIENT_SECRET'],
-//         code:authCode,
-//         redirect_uri:request.query['redirect_uri'],
-//         Accept:'application/json'
-//     })
-//         .then(function (response) {
-//             console.log(response);
-//             accessToken = response.data
-//         })
-//         .catch(function (error) {
-//             console.log(error);
-//         });
-//    
-// })
-
 
 // Run the server!
 const start = async () => {

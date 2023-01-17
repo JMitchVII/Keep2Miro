@@ -32,7 +32,7 @@ const miroService = require('./Service/MiroService')
 var cache = undefined
 
 // Address off the KeepRest server
-const keepRestUrl = 'http://127.0.0.1:5000/All'
+const keepRestUrl = 'http://127.0.0.1:8000/All'
 
 // Access token for modifying miro board
 var accessToken = undefined

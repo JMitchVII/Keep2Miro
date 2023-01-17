@@ -85,7 +85,7 @@ fastify.get('/push', async (request, reply) => {
     if (cache === undefined) {
         try {
             const response = await axios.get(keepRestUrl);
-            console.log(response);
+            console.log(responsqe);
             cache = response.data
         } catch (error) {
             console.error(error);
@@ -116,7 +116,7 @@ fastify.get('/push', async (request, reply) => {
     })
 
     // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
-    var responses = createStickyNotesFromList(notesToCreate);
+    var responses = miroService.createStickyNotesFromList(notesToCreate);
     // Store corresponding note Ids
     fs.writeFile('responses.json', JSON.stringify(responses), err => console.log(err))
     // inform of progress
@@ -126,7 +126,7 @@ fastify.get('/push', async (request, reply) => {
 // Run the server!
 const start = async () => {
     try {
-        await fastify.listen({port: 3000})
+        await fastify.listen({port: 3000, host: '0.0.0.0'})
     } catch (err) {
         fastify.log.error(err)
         process.exit(1)

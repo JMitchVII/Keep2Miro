@@ -1,6 +1,6 @@
 ﻿const sdk = require('api')('@miro-ea/v2.0#33ql1cuxl6zk4s7y');
 
-function createStickyNotesFromList(notesToCreate) {
+function createStickyNotesFromList(notesToCreate,boardId) {
     var responses = [];
     sdk.auth('eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_IismcDr_6azwvpLR82FaJKwM0SQ');
     notesToCreate.forEach(ntc => {

@@ -116,7 +116,7 @@ fastify.get('/push', async (request, reply) => {
     })
 
     // Loop though sticky note structure to make requests (apply a delay cause there are A LOT
-    var responses = miroService.createStickyNotesFromList(notesToCreate);
+    var responses = miroService.createStickyNotesFromList(notesToCreate,boardId);
     // Store corresponding note Ids
     fs.writeFile('responses.json', JSON.stringify(responses), err => console.log(err))
     // inform of progress
